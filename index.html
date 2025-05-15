@@ -1,44 +1,58 @@
-<script>
-    // Инициализация переменной для сканера
-    let scanner = null;
-
-    // Функция для запуска сканера
-    async function startScanner() {
-        const readerElement = document.getElementById("reader");
-        const resultElement = document.getElementById("qr-result");
-
-        // Инициализация сканера через API библиотеки
-        scanner = new Html5Qrcode("reader");
-
-        // Запуск сканера
-        try {
-            await scanner.start(
-                { facingMode: "environment" },  // Используем заднюю камеру
-                { fps: 10, qrbox: 250 },       // Настройки сканера (частота кадров, размер области для QR)
-                (decodedText) => {             // Обработчик успешного сканирования
-                    resultElement.textContent = `QR-код: ${decodedText}`;
-                    stopScanner();             // Остановка сканера после нахождения кода
-                },
-                (errorMessage) => {            // Обработчик ошибок
-                    console.warn("Ошибка сканирования: ", errorMessage);
-                }
-            );
-        } catch (error) {
-            console.error("Ошибка при запуске сканера: ", error);
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner using ZXing</title>
+    <script src="https://unpkg.com/@zxing/library@0.18.5/dist/index.min.js"></script>
+    <style>
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            max-height: 400px;
+            margin: auto;
+            border: 2px dashed #ccc;
         }
-    }
+    </style>
+</head>
+<body>
 
-    // Функция для остановки сканера
-    function stopScanner() {
-        if (scanner) {
-            scanner.stop();
-            document.getElementById("reader").innerHTML = "";
-            console.log("Сканер остановлен.");
+    <h2>Сканер QR-кода с помощью ZXing</h2>
+    <button onclick="startScanner()">Запустить сканер</button>
+    <div id="reader"></div>
+    <p id="camera-output"></p>
+
+    <script>
+        let codeReader = new ZXing.BrowserMultiFormatReader();
+        let scanning = false;
+
+        function startScanner() {
+            const readerElement = document.getElementById('reader');
+            const outputElement = document.getElementById('camera-output');
+
+            if (!scanning) {
+                codeReader
+                    .decodeFromVideoDevice(null, readerElement, (result, err) => {
+                        if (result) {
+                            outputElement.textContent = `QR-код: ${result.text}`;
+                        }
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                            console.error(err);
+                        }
+                    })
+                    .then(() => {
+                        scanning = true;
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                    });
+            } else {
+                codeReader.reset();
+                outputElement.textContent = "";
+                scanning = false;
+            }
         }
-    }
+    </script>
 
-    // Запуск сканера при загрузке страницы
-    window.onload = () => {
-        startScanner();
-    };
-</script>
+</body>
+</html>
