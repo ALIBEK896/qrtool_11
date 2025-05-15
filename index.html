@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+            border: 2px dashed #ccc;
+        }
+        #camera-output {
+            margin-top: 10px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Сканер QR-кода</h2>
+    <button id="camera-btn" onclick="startScanner()">Запустить сканер</button>
+    <div id="reader"></div>
+    <p id="camera-output"></p>
+
+    <script>
+        let scanner = null;
+        let isScanning = false;
+
+        async function startScanner() {
+            const btn = document.getElementById("camera-btn");
+            btn.disabled = true;
+            btn.textContent = "Запуск...";
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                document.getElementById('camera-output').textContent = "Ваш браузер не поддерживает доступ к камере.";
+                btn.disabled = false;
+                btn.textContent = "Запустить сканер";
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                stream.getTracks().forEach(track => track.stop()); // Просто запрашиваем разрешение
+
+                scanner = new Html5Qrcode("reader");
+                await scanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    (decodedText) => {
+                        document.getElementById('camera-output').textContent = `QR-код: ${decodedText}`;
+                        stopScanner();
+                    },
+                    (errorMessage) => {
+                        console.warn("Ошибка сканирования: ", errorMessage);
+                    }
+                );
+
+                btn.textContent = "Остановить сканер";
+                btn.disabled = false;
+                btn.onclick = stopScanner;
+                isScanning = true;
+
+            } catch (error) {
+                console.error("Ошибка доступа к камере: ", error);
+                document.getElementById('camera-output').textContent = "Ошибка доступа к камере! Проверьте разрешения.";
+                btn.disabled = false;
+                btn.textContent = "Запустить сканер";
+            }
+        }
+
+        async function stopScanner() {
+            const btn = document.getElementById("camera-btn");
+            btn.disabled = true;
+            btn.textContent = "Остановка...";
+
+            if (scanner && isScanning) {
+                try {
+                    await scanner.stop();
+                } catch (err) {
+                    console.error("Ошибка при остановке сканера:", err);
+                }
+                document.getElementById("reader").innerHTML = "";
+                document.getElementById("camera-output").textContent = "";
+                scanner = null;
+                isScanning = false;
+            }
+
+            btn.textContent = "Запустить сканер";
+            btn.onclick = startScanner;
+            btn.disabled = false;
+        }
+    </script>
+
+</body>
+</html>
